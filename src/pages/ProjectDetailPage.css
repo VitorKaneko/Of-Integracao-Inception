@@ -1,0 +1,175 @@
+.project-detail-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 18px;
+  align-items: start;
+  margin-top: 16px;
+}
+
+.project-summary {
+  position: relative;
+}
+
+.project-summary__owner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 16px 0;
+}
+
+.hr {
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  margin: 16px 0;
+}
+
+.project-summary__description {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 13.5px;
+}
+
+.project-summary__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.project-status {
+  padding: 22px;
+}
+
+.status-pipeline {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 18px 0 8px;
+  position: relative;
+}
+
+.status-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.status-step--active {
+  color: var(--brand);
+  font-weight: 500;
+}
+
+.status-step__active-dot {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-step__inner-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: var(--brand);
+  border-radius: 999px;
+}
+
+.project-files {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.project-file {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border-subtle);
+}
+
+.project-file__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  display: grid;
+  place-items: center;
+}
+
+.project-file__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.project-file__name {
+  font-size: 13.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-file__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  transition: var(--t-fast);
+}
+
+.icon-btn:hover {
+  background: var(--bg-elev-3);
+  color: var(--text-primary);
+}
+
+.project-file--add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px dashed var(--border-strong);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  transition: var(--t-fast);
+}
+
+.project-file--add:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.history-item {
+  display: flex;
+  gap: 12px;
+}
+
+.history-item__dot {
+  width: 8px;
+  height: 8px;
+  background: var(--brand);
+  border-radius: 999px;
+  margin-top: 7px;
+  flex-shrink: 0;
+}

@@ -1,0 +1,48 @@
+.profile-card {
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px;
+}
+
+.profile-card__header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.profile-name {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.profile-grid > .field:first-child {
+  grid-column: span 3;
+}
+
+.profile-password {
+  margin-top: 4px;
+}
+
+.profile-password label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.link-btn {
+  font-size: 13px;
+  color: var(--brand);
+  font-weight: 500;
+  transition: var(--t-fast);
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}

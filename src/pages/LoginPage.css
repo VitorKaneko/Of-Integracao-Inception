@@ -1,0 +1,163 @@
+.login-page {
+  min-height: 100vh;
+  background: var(--bg-base);
+  display: grid;
+  place-items: center;
+  position: relative;
+  padding: 32px;
+  overflow: hidden;
+}
+
+.login-stack {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  z-index: 2;
+}
+
+.login-card {
+  width: 100%;
+  background: var(--bg-elev-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 36px 32px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: center;
+}
+
+.login-card__logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.login-card__title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+}
+
+.login-card__subtitle {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--brand);
+}
+
+.login-card .field {
+  text-align: left;
+}
+
+.login-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  background: var(--accent-red-soft);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: var(--accent-red);
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+  text-align: left;
+}
+
+.login-accounts {
+  background: var(--bg-elev-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.login-accounts__toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: var(--t-fast);
+}
+
+.login-accounts__toggle:hover {
+  color: var(--brand);
+}
+
+.login-accounts__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 8px 10px;
+}
+
+.login-account {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-elev-2);
+  border: 1px solid transparent;
+  transition: var(--t-fast);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.login-account:hover {
+  border-color: var(--brand);
+  background: var(--brand-soft-2);
+}
+
+.login-account--inactive {
+  opacity: 0.55;
+}
+
+.login-account__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.login-account__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.login-account__creds {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.login-account__pwd {
+  color: var(--brand);
+}
+
+/* tag por role no painel de contas */
+.tag.tag-role-SuperAdmin {
+  border-color: var(--status-purple);
+  color: var(--status-purple);
+  background: rgba(168, 85, 247, 0.12);
+}
+
+.tag.tag-role-Admin {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+  background: var(--accent-red-soft);
+}
+
+.tag.tag-role-Visitante {
+  border-color: var(--border-strong);
+  color: var(--text-secondary);
+  background: transparent;
+}
