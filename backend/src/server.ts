@@ -2,6 +2,11 @@ import fastify from 'fastify';
 import fastifyJwt from '@fastify/jwt';
 import fastifyCookie from '@fastify/cookie';
 import { authRoutes } from './routes/auth.routes';
+import { projetoRoutes } from './routes/projeto.routes';
+import { arquivoRoutes } from './routes/arquivo.routes';
+import { solicitacaoRoutes } from './routes/solicitacao.routes';
+import { historicoRoutes } from './routes/historico.routes';
+import { conteudoRoutes } from './routes/conteudo.routes';
 import 'dotenv/config';
 
 const app = fastify({ logger: true });
@@ -13,6 +18,11 @@ app.register(fastifyJwt, {
 
 app.register(fastifyCookie);
 app.register(authRoutes);
+app.register(projetoRoutes);
+app.register(arquivoRoutes);
+app.register(solicitacaoRoutes);
+app.register(historicoRoutes);
+app.register(conteudoRoutes);
 
 app.get('/', async () => {
   return { mensagem: 'API da Inception 3D está rodando 100%!' };
