@@ -1,19 +1,20 @@
 import fastify from 'fastify';
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
+import fastifyJwt from '@fastify/jwt';
+import fastifyCookie from '@fastify/cookie';
+import { authRoutes } from './routes/auth.routes';
 import 'dotenv/config';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
 
 const app = fastify({ logger: true });
 
-app.get('/', async (request, reply) => {
+app.register(fastifyJwt, {
+  secret: process.env.JWT_SECRET!,
+  cookie: { cookieName: 'token', signed: false },
+});
+
+app.register(fastifyCookie);
+app.register(authRoutes);
+
+app.get('/', async () => {
   return { mensagem: 'API da Inception 3D está rodando 100%!' };
 });
 
