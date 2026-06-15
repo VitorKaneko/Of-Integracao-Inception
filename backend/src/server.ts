@@ -1,6 +1,7 @@
 import fastify from 'fastify';
 import fastifyJwt from '@fastify/jwt';
 import fastifyCookie from '@fastify/cookie';
+import fastifyMultipart from '@fastify/multipart';
 import { authRoutes } from './routes/auth.routes';
 import { projetoRoutes } from './routes/projeto.routes';
 import { arquivoRoutes } from './routes/arquivo.routes';
@@ -17,6 +18,9 @@ app.register(fastifyJwt, {
 });
 
 app.register(fastifyCookie);
+app.register(fastifyMultipart, {
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
+});
 app.register(authRoutes);
 app.register(projetoRoutes);
 app.register(arquivoRoutes);
@@ -31,7 +35,7 @@ app.get('/', async () => {
 const start = async () => {
   try {
     await app.listen({ port: 3333, host: '0.0.0.0' });
-    console.log('🚀 Servidor rodando em http://localhost:3333');
+    console.log('Servidor rodando em http://localhost:3333');
   } catch (err) {
     app.log.error(err);
     process.exit(1);

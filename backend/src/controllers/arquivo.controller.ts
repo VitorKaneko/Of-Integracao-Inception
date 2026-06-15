@@ -1,28 +1,43 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../lib/prisma';
-
-interface ArquivoBody {
-  nomeArquivo: string;
-  urlCaminho: string;
-  tipoExtensao: string;
-  idProjeto: string;
-}
+import { criarPastaNoDrive, buscarPastaDoProjeto, uploadArquivo } from '../lib/drive';
+import path from 'node:path';
 
 interface ArquivoParams {
   id: string;
 }
 
-export async function criarArquivo(
-  req: FastifyRequest<{ Body: ArquivoBody }>,
+export async function uploadArquivoProjeto(
+  req: FastifyRequest<{ Params: { idProjeto: string } }>,
   reply: FastifyReply
 ) {
-  const { nomeArquivo, urlCaminho, tipoExtensao, idProjeto } = req.body;
+  const { idProjeto } = req.params;
 
   const projeto = await prisma.projeto.findUnique({ where: { id: idProjeto } });
   if (!projeto) return reply.status(404).send({ error: 'Projeto não encontrado.' });
 
+  const data = await req.file();
+  if (!data) return reply.status(400).send({ error: 'Nenhum arquivo enviado.' });
+
+  const buffer = await data.toBuffer();
+  const nomeArquivo = data.filename;
+  const mimeType = data.mimetype;
+  const tipoExtensao = path.extname(nomeArquivo).replace('.', '');
+
+  let idPasta = await buscarPastaDoProjeto(projeto.titulo);
+  if (!idPasta) {
+    idPasta = await criarPastaNoDrive(projeto.titulo);
+  }
+
+  const { link } = await uploadArquivo(nomeArquivo, mimeType, buffer, idPasta);
+
   const arquivo = await prisma.arquivo.create({
-    data: { nomeArquivo, urlCaminho, tipoExtensao, idProjeto },
+    data: {
+      nomeArquivo,
+      urlCaminho: link,
+      tipoExtensao,
+      idProjeto,
+    },
   });
 
   return reply.status(201).send({ arquivo });
