@@ -6,11 +6,100 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum PerfilAcesso {
+  ADMIN
+  USUARIO
+  VISITANTE
+}
+
+enum StatusImpressao {
+  PENDENTE
+  EM_ANDAMENTO
+  CONCLUIDO
+  CANCELADO
+}
+
+enum Visibilidade {
+  PUBLICO
+  PRIVADO
+}
+
+enum StatusSolicitacao {
+  PENDENTE
+  APROVADA
+  RECUSADA
+}
+
+model Usuario {
+  id             String    @id @default(uuid())
+  nome           String
+  email          String    @unique
+  senha          String
+  perfilAcesso   PerfilAcesso @default(VISITANTE)
+  dataCadastro   DateTime  @default(now())
+
+  projetos              Projeto[]
+  conteudosEducacionais ConteudoEducacional[]
+  solicitacoes          Solicitacao[]
+}
+
+model Projeto {
+  id               String          @id @default(uuid())
+  titulo           String
+  descricao        String?
+  statusImpressao  StatusImpressao @default(PENDENTE)
+  visibilidade     Visibilidade    @default(PUBLICO)
+  dataCriacao      DateTime        @default(now())
+
+  usuario          Usuario         @relation(fields: [idUsuario], references: [id])
+  idUsuario        String
+
+  solicitacao      Solicitacao?    @relation(fields: [idSolicitacao], references: [id])
+  idSolicitacao    String?
+
+  arquivos         Arquivo[]
+  historicos       HistoricoProjeto[]
+}
+
+model Arquivo {
+  id            String   @id @default(uuid())
+  nomeArquivo   String
+  urlCaminho    String
+  tipoExtensao  String
+
+  projeto       Projeto  @relation(fields: [idProjeto], references: [id], onDelete: Cascade)
+  idProjeto     String
+}
+
+model HistoricoProjeto {
+  id              String   @id @default(uuid())
+  statusAnterior  String
+  statusNovo      String
+  dataAlteracao   DateTime @default(now())
+
+  projeto         Projeto  @relation(fields: [idProjeto], references: [id], onDelete: Cascade)
+  idProjeto       String
+}
+
+model ConteudoEducacional {
+  id              String   @id @default(uuid())
+  titulo          String
+  categoria       String
+  urlLink         String
+
+  usuarioAdmin    Usuario  @relation(fields: [idUsuarioAdmin], references: [id])
+  idUsuarioAdmin  String
+}
+
+model Solicitacao {
+  id                   String            @id @default(uuid())
+  descricaoPedido      String
+  statusSolicitacao    StatusSolicitacao @default(PENDENTE)
+  justificativaRecusa  String?
+  dataSolicitacao      DateTime          @default(now())
+
+  usuarioVisitante     Usuario           @relation(fields: [idUsuarioVisitante], references: [id])
+  idUsuarioVisitante   String
+
+  projetos             Projeto[]
 }
