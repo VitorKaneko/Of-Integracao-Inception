@@ -6,67 +6,67 @@ import {
   useEffect,
   useMemo,
   useState,
-} from "react";
-import { authenticate, User } from "../data/mockData";
+} from 'react';
+import { authService } from '../services/auth.service';
+import { Usuario, PerfilAcesso } from '../types/api.types';
 
-const STORAGE_KEY = "inception3d:auth";
+const TOKEN_KEY = 'inception3d:token';
 
 interface AuthContextValue {
-  user: User | null;
+  user: Usuario | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => { ok: true } | { ok: false; error: string };
-  logout: () => void;
+  login: (email: string, password: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function readStored(): User | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as User;
-  } catch {
-    return null;
-  }
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => readStored());
+  const [user, setUser] = useState<Usuario | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-    else localStorage.removeItem(STORAGE_KEY);
-  }, [user]);
-
-  const login = useCallback((email: string, password: string) => {
-    const found = authenticate(email, password);
-    if (!found) {
-      return { ok: false, error: "E-mail ou senha invalidos." } as const;
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setLoading(false);
+      return;
     }
-    if (found.status === "Inativo") {
-      return {
-        ok: false,
-        error: "Esta conta esta inativa. Entre em contato com um administrador.",
-      } as const;
-    }
-    setUser(found);
-    return { ok: true } as const;
+    authService.me()
+      .then(setUser)
+      .catch(() => localStorage.removeItem(TOKEN_KEY))
+      .finally(() => setLoading(false));
   }, []);
 
-  const logout = useCallback(() => {
+  const login = useCallback(async (email: string, password: string) => {
+    try {
+      const { token, user } = await authService.login(email, password);
+      localStorage.setItem(TOKEN_KEY, token);
+      setUser(user);
+      return { ok: true } as const;
+    } catch (err: any) {
+      const message = err.response?.data?.error ?? 'Erro ao fazer login.';
+      return { ok: false, error: message } as const;
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    await authService.logout().catch(() => {});
+    localStorage.removeItem(TOKEN_KEY);
     setUser(null);
   }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({ user, isAuthenticated: !!user, login, logout }),
-    [user, login, logout],
+    [user, login, logout]
   );
+
+  if (loading) return null;
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used inside <AuthProvider />");
+  if (!ctx) throw new Error('useAuth must be used inside <AuthProvider />');
   return ctx;
 }

@@ -1,6 +1,7 @@
 import fastify from 'fastify';
 import fastifyJwt from '@fastify/jwt';
 import fastifyCookie from '@fastify/cookie';
+import fastifyCors from '@fastify/cors';
 import fastifyMultipart from '@fastify/multipart';
 import { authRoutes } from './routes/auth.routes';
 import { projetoRoutes } from './routes/projeto.routes';
@@ -10,6 +11,8 @@ import { historicoRoutes } from './routes/historico.routes';
 import { conteudoRoutes } from './routes/conteudo.routes';
 import 'dotenv/config';
 
+
+
 const app = fastify({ logger: true });
 
 app.register(fastifyJwt, {
@@ -18,6 +21,12 @@ app.register(fastifyJwt, {
 });
 
 app.register(fastifyCookie);
+
+app.register(fastifyCors, {
+  origin: 'http://localhost:5173',
+  credentials: true,
+});
+
 app.register(fastifyMultipart, {
   limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
 });

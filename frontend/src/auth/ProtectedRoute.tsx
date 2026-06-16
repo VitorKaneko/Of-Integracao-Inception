@@ -1,11 +1,11 @@
-import { ReactNode } from "react";
-import { Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "./AuthContext";
-import { Role } from "../data/mockData";
+import { ReactNode } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from './AuthContext';
+import { PerfilAcesso } from '../types/api.types';
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  allowedRoles?: Role[];
+  allowedRoles?: PerfilAcesso[];
 }
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
@@ -16,7 +16,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+  if (allowedRoles && !allowedRoles.includes(user.perfilAcesso)) {
     return <Navigate to="/" replace />;
   }
 
