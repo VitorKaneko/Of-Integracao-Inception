@@ -1,4 +1,4 @@
-import { FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../lib/prisma';
 
 export async function verifyToken(req: FastifyRequest, reply: FastifyReply) {
@@ -27,13 +27,16 @@ export function requirePerfil(...perfis: string[]) {
     }
   };
 }
-
 export async function requireProprietarioOuAdmin(
   req: FastifyRequest<{ Params: { id?: string; idProjeto?: string } }>,
   reply: FastifyReply
 ) {
   const { sub } = req.user as { sub: string };
   const projetoId = req.params.id ?? req.params.idProjeto;
+
+  if (!projetoId) {
+    return reply.status(400).send({ error: 'ID do projeto não informado.' });
+  }
 
   const usuario = await prisma.usuario.findUnique({
     where: { id: sub },
