@@ -3,31 +3,31 @@ import { prisma } from '../lib/prisma';
 import bcrypt from 'bcryptjs';
 
 interface RegisterBody {
-  name: string;
+  nome: string;
   email: string;
-  password: string;
+  senha: string;
 }
 
 interface LoginBody {
   email: string;
-  password: string;
+  senha: string;
 }
 
 export async function register(
   req: FastifyRequest<{ Body: RegisterBody }>,
   reply: FastifyReply
 ) {
-  const { name, email, password } = req.body;
+  const { nome, email, senha } = req.body;
 
-  const userExists = await prisma.user.findUnique({ where: { email } });
+  const userExists = await prisma.usuario.findUnique({ where: { email } });
   if (userExists) {
     return reply.status(409).send({ error: 'E-mail já cadastrado.' });
   }
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const senhaHash = await bcrypt.hash(senha, 10);
 
-  const user = await prisma.user.create({
-    data: { name, email, password: hashedPassword },
+  const user = await prisma.usuario.create({
+    data: { nome, email, senha: senhaHash },
   });
 
   const token = await reply.jwtSign({ sub: user.id, email: user.email });
@@ -42,7 +42,7 @@ export async function register(
 
   return reply.status(201).send({
     token,
-    user: { id: user.id, name: user.name, email: user.email },
+    user: { id: user.id, nome: user.nome, email: user.email, perfilAcesso: user.perfilAcesso },
   });
 }
 
@@ -50,15 +50,15 @@ export async function login(
   req: FastifyRequest<{ Body: LoginBody }>,
   reply: FastifyReply
 ) {
-  const { email, password } = req.body;
+  const { email, senha } = req.body;
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.usuario.findUnique({ where: { email } });
   if (!user) {
     return reply.status(401).send({ error: 'Credenciais inválidas.' });
   }
 
-  const passwordMatch = await bcrypt.compare(password, user.password);
-  if (!passwordMatch) {
+  const senhaMatch = await bcrypt.compare(senha, user.senha);
+  if (!senhaMatch) {
     return reply.status(401).send({ error: 'Credenciais inválidas.' });
   }
 
@@ -74,7 +74,7 @@ export async function login(
 
   return reply.send({
     token,
-    user: { id: user.id, name: user.name, email: user.email },
+    user: { id: user.id, nome: user.nome, email: user.email, perfilAcesso: user.perfilAcesso },
   });
 }
 
@@ -87,9 +87,9 @@ export async function logout(_req: FastifyRequest, reply: FastifyReply) {
 export async function me(req: FastifyRequest, reply: FastifyReply) {
   const { sub } = req.user as { sub: string };
 
-  const user = await prisma.user.findUnique({
+  const user = await prisma.usuario.findUnique({
     where: { id: sub },
-    select: { id: true, name: true, email: true, createdAt: true },
+    select: { id: true, nome: true, email: true, perfilAcesso: true, dataCadastro: true },
   });
 
   if (!user) {

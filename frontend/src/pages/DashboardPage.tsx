@@ -1,23 +1,30 @@
 import { Link } from "react-router-dom";
 import { Clock, CheckCircle2, PauseCircle, Folder, TrendingUp } from "lucide-react";
-import { mockActivities, mockProjects } from "../data/mockData";
+import { useQuery } from "@tanstack/react-query";
+import { projetoService } from "../services/projeto.service";
 import { useAuth } from "../auth/AuthContext";
 import "./DashboardPage.css";
 
 export function DashboardPage() {
   const { user } = useAuth();
-  const userSector = user?.sector ?? "Projetos";
-  const firstName = user?.name.split(" ")[0] ?? "";
+  const firstName = user?.nome.split(" ")[0] ?? "";
+
+  const { data: projetos = [], isLoading } = useQuery({
+    queryKey: ["projetos"],
+    queryFn: projetoService.listar,
+  });
 
   const counts = {
-    andamento: mockProjects.filter((p) => p.status === "Em Andamento").length,
-    concluidos: mockProjects.filter((p) => p.status === "Concluido").length,
-    pausados: mockProjects.filter((p) => p.status === "Pausado").length,
+    andamento: projetos.filter((p) => p.statusImpressao === "EM_ANDAMENTO").length,
+    concluidos: projetos.filter((p) => p.statusImpressao === "CONCLUIDO").length,
+    pausados: projetos.filter((p) => p.statusImpressao === "CANCELADO").length,
   };
 
-  const myProjects = mockProjects
-    .filter((p) => p.sector === userSector && p.status === "Em Andamento")
+  const myProjects = projetos
+    .filter((p) => p.idUsuario === user?.id)
     .slice(0, 2);
+
+  const recentProjects = projetos.slice(0, 5);
 
   return (
     <>
@@ -56,41 +63,29 @@ export function DashboardPage() {
           <header className="dashboard-projects__header">
             <h2 className="card-title">
               <Folder size={16} style={{ marginRight: 6, color: "var(--brand)" }} />
-              Seus projetos e do seu setor
+              Seus projetos
             </h2>
-            <span className="muted" style={{ fontSize: 12 }}>
-              Setor: {userSector}
-            </span>
           </header>
 
           <div className="dashboard-projects__list">
+            {isLoading && <p className="muted">Carregando projetos...</p>}
+
+            {!isLoading && myProjects.length === 0 && (
+              <p className="muted" style={{ fontSize: 13, padding: "12px 0" }}>
+                Nenhum projeto encontrado.
+              </p>
+            )}
+
             {myProjects.map((p) => (
-              <Link
-                to={`/projetos/${p.id}`}
-                key={p.id}
-                className="dashboard-project-row"
-              >
+              <Link to={`/projetos/${p.id}`} key={p.id} className="dashboard-project-row">
                 <div className="dashboard-project-row__top">
-                  <span className="dashboard-project-row__title">{p.title}</span>
-                  <span className="tag">{p.status}</span>
+                  <span className="dashboard-project-row__title">{p.titulo}</span>
+                  <span className="tag">{p.statusImpressao}</span>
                 </div>
                 <div className="dashboard-project-row__meta">
-                  <span className="tag">{p.sector}</span>
                   <span className="muted" style={{ fontSize: 12 }}>
-                    {p.ownerInitials} {p.owner}
+                    Criado em {new Date(p.dataCriacao).toLocaleDateString("pt-BR")}
                   </span>
-                  <span className="muted" style={{ fontSize: 12 }}>
-                    Atualizado em {p.updatedAt}
-                  </span>
-                </div>
-                <div className="dashboard-project-row__progress">
-                  <div className="progress-row">
-                    <span>Progresso</span>
-                    <span>{p.progress}%</span>
-                  </div>
-                  <div className="progress">
-                    <span style={{ width: `${p.progress}%` }} />
-                  </div>
                 </div>
               </Link>
             ))}
@@ -104,16 +99,19 @@ export function DashboardPage() {
           </h2>
 
           <ul className="activity-list">
-            {mockActivities.map((a) => (
-              <li key={a.id} className="activity-item">
+            {isLoading && <p className="muted">Carregando...</p>}
+            {recentProjects.map((p) => (
+              <li key={p.id} className="activity-item">
                 <span className="activity-item__dot" />
                 <div>
-                  <p className="activity-item__title">{a.title}</p>
-                  <p className="activity-item__subject">{a.subject}</p>
+                  <p className="activity-item__title">Projeto</p>
+                  <p className="activity-item__subject">{p.titulo}</p>
                   <p className="activity-item__meta">
-                    <span className="muted">{a.user}</span>
+                    <span className="muted">{p.usuario?.nome ?? "—"}</span>
                     <span className="muted">·</span>
-                    <span className="muted">{a.timeAgo}</span>
+                    <span className="muted">
+                      {new Date(p.dataCriacao).toLocaleDateString("pt-BR")}
+                    </span>
                   </p>
                 </div>
               </li>
