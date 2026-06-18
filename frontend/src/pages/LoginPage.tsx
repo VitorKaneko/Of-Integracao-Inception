@@ -4,8 +4,15 @@ import { AlertCircle, ChevronDown } from "lucide-react";
 import { Logo } from "../components/Logo";
 import { DecoSquare } from "../components/DecoSquare";
 import { useAuth } from "../auth/AuthContext";
-import { mockUsers } from "../data/mockData";
 import "./LoginPage.css";
+
+const DEMO_ACCOUNTS = [
+  { id: "u-1", name: "Carlos Henrique Santos", email: "carlos.santos@inception3d.com", password: "carlos123", role: "ADMIN" },
+  { id: "u-2", name: "Maria Fernanda Costa",   email: "maria.costa@inception3d.com",  password: "maria123",  role: "ADMIN" },
+  { id: "u-3", name: "Roberto Almeida Silva",  email: "roberto.silva@inception3d.com",password: "roberto123",role: "USUARIO" },
+  { id: "u-4", name: "Ana Silva",              email: "ana.silva@inception3d.com",    password: "ana123",    role: "USUARIO" },
+  { id: "u-5", name: "Pedro Santos Visitante", email: "pedro.visitante@external.com", password: "pedro123", role: "VISITANTE", inactive: true },
+];
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -16,12 +23,15 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [showAccounts, setShowAccounts] = useState(false);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    const result = login(email, password);
+    setLoading(true);
+    const result = await login(email, password);
+    setLoading(false);
     if (result.ok) {
       navigate(from, { replace: true });
     } else {
@@ -83,8 +93,13 @@ export function LoginPage() {
             </div>
           )}
 
-          <button type="submit" className="btn btn-primary btn-block" style={{ marginTop: 22 }}>
-            Entrar
+          <button
+            type="submit"
+            className="btn btn-primary btn-block"
+            style={{ marginTop: 22 }}
+            disabled={loading}
+          >
+            {loading ? "Entrando..." : "Entrar"}
           </button>
         </form>
 
@@ -107,18 +122,16 @@ export function LoginPage() {
 
           {showAccounts && (
             <ul className="login-accounts__list">
-              {mockUsers.map((u) => (
+              {DEMO_ACCOUNTS.map((u) => (
                 <li key={u.id}>
                   <button
                     type="button"
-                    className={
-                      "login-account" + (u.status === "Inativo" ? " login-account--inactive" : "")
-                    }
+                    className={"login-account" + (u.inactive ? " login-account--inactive" : "")}
                     onClick={() => fillAccount(u.email, u.password)}
                   >
                     <div className="login-account__top">
                       <span className="login-account__name">{u.name}</span>
-                      <span className={"tag tag-role-" + u.role.replace(/\s/g, "")}>{u.role}</span>
+                      <span className={"tag tag-role-" + u.role}>{u.role}</span>
                     </div>
                     <div className="login-account__creds">
                       <span>{u.email}</span>
