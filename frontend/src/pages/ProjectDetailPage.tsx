@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   Edit3,
@@ -9,62 +10,102 @@ import {
   CheckCircle2,
   Circle,
 } from "lucide-react";
-import { mockProjects } from "../data/mockData";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { projetoService } from "../services/projeto.service";
+import { useAuth } from "../auth/AuthContext";
+import { StatusImpressao } from "../types/api.types";
 import { DecoSquare } from "../components/DecoSquare";
 import "./ProjectDetailPage.css";
 
-const STATUS_PIPELINE = ["Solicitado", "Em Analise", "Em Andamento", "Concluido"];
-
-const PROJECT_FILES = [
-  { name: "prototipo_base_v3", ext: "stl", size: "12.4 MB" },
-  { name: "tampa_superior_v2", ext: "stl", size: "8.2 MB" },
-  { name: "componente_interno", ext: "obj", size: "5.7 MB" },
+const STATUS_PIPELINE: StatusImpressao[] = [
+  "PENDENTE",
+  "EM_ANDAMENTO",
+  "CONCLUIDO",
+  "CANCELADO",
 ];
 
-const PROJECT_HISTORY = [
-  {
-    id: "h-1",
-    text: "Status alterado para \"Em Andamento\" por Admin",
-    date: "29/03/2024 - 14:30",
-  },
-  {
-    id: "h-2",
-    text: "Arquivo prototipo_base_v3.stl adicionado por Carlos Henrique Santos",
-    date: "28/03/2024 - 16:12",
-  },
-  {
-    id: "h-3",
-    text: "Projeto criado por Carlos Henrique Santos",
-    date: "27/03/2024 - 09:48",
-  },
-];
+const STATUS_LABEL: Record<StatusImpressao, string> = {
+  PENDENTE: "Pendente",
+  EM_ANDAMENTO: "Em Andamento",
+  CONCLUIDO: "Concluido",
+  CANCELADO: "Cancelado",
+};
 
 export function ProjectDetailPage() {
-  const { id } = useParams();
+  const { id = "" } = useParams();
   const navigate = useNavigate();
-  const project = mockProjects.find((p) => p.id === id) ?? mockProjects[8];
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  const currentIndex = 2;
+  const [novoStatus, setNovoStatus] = useState<StatusImpressao | "">("");
+
+  const { data: project, isLoading } = useQuery({
+    queryKey: ["projeto", id],
+    queryFn: () => projetoService.buscar(id),
+    enabled: !!id,
+  });
+
+  const atualizarMutation = useMutation({
+    mutationFn: (status: StatusImpressao) =>
+      projetoService.atualizar(id, { statusImpressao: status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projeto", id] });
+    },
+  });
+
+  const deletarMutation = useMutation({
+    mutationFn: () => projetoService.deletar(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projetos"] });
+      navigate("/projetos");
+    },
+  });
+
+  if (isLoading) return <p className="muted">Carregando projeto...</p>;
+  if (!project) return <p className="muted">Projeto não encontrado.</p>;
+
+  const currentIndex = STATUS_PIPELINE.indexOf(project.statusImpressao);
+  const ehAutor = project.idUsuario === user?.id;
+  const ehAdmin = user?.perfilAcesso === "ADMIN";
+  const podeEditar = ehAutor || ehAdmin;
+
+  const iniciais = (project.usuario?.nome ?? "")
+    .split(" ")
+    .filter(Boolean)
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  function handleAlterarStatus(e: React.ChangeEvent<HTMLSelectElement>) {
+    const status = e.target.value as StatusImpressao;
+    setNovoStatus(status);
+    if (status && status !== project!.statusImpressao) {
+      atualizarMutation.mutate(status);
+    }
+  }
 
   return (
     <>
       <div className="breadcrumb">
         <Link to="/projetos">Projetos</Link>
         <ChevronRight size={14} />
-        <span>{project.title}</span>
+        <span>{project.titulo}</span>
       </div>
 
       <div className="project-detail-grid">
         <div className="card project-summary">
-          <h1 style={{ fontSize: 26, fontWeight: 700, marginBottom: 16 }}>{project.title}</h1>
+          <h1 style={{ fontSize: 26, fontWeight: 700, marginBottom: 16 }}>
+            {project.titulo}
+          </h1>
 
           <div className="project-summary__owner">
-            <div className="avatar">{project.ownerInitials}</div>
+            <div className="avatar">{iniciais || "—"}</div>
             <div>
               <p className="muted" style={{ fontSize: 12 }}>
                 Responsavel
               </p>
-              <p style={{ fontWeight: 500 }}>{project.owner}</p>
+              <p style={{ fontWeight: 500 }}>{project.usuario?.nome ?? "—"}</p>
             </div>
           </div>
 
@@ -74,20 +115,27 @@ export function ProjectDetailPage() {
             Descricao do Projeto
           </p>
           <p className="project-summary__description">
-            {project.description ??
+            {project.descricao ??
               "Projeto interno em fase de desenvolvimento. Detalhes serao publicados em breve."}
           </p>
 
           <hr className="hr" />
 
-          <div className="project-summary__actions">
-            <button className="btn btn-primary">
-              <Edit3 size={14} /> Editar Projeto
-            </button>
-            <button className="btn btn-danger">
-              <Trash2 size={14} /> Excluir
-            </button>
-          </div>
+          {podeEditar && (
+            <div className="project-summary__actions">
+              <button
+                className="btn btn-danger"
+                onClick={() => {
+                  if (confirm(`Excluir o projeto "${project.titulo}"?`)) {
+                    deletarMutation.mutate();
+                  }
+                }}
+                disabled={deletarMutation.isPending}
+              >
+                <Trash2 size={14} /> {deletarMutation.isPending ? "Excluindo..." : "Excluir"}
+              </button>
+            </div>
+          )}
         </div>
 
         <aside className="card project-status">
@@ -108,21 +156,35 @@ export function ProjectDetailPage() {
                   ) : (
                     <Circle size={20} color="var(--border-strong)" />
                   )}
-                  <span className={done || active ? "" : "muted"}>{s}</span>
+                  <span className={done || active ? "" : "muted"}>{STATUS_LABEL[s]}</span>
                 </li>
               );
             })}
           </ul>
 
-          <div className="field" style={{ marginTop: 18 }}>
-            <label htmlFor="status">Alterar Status</label>
-            <select id="status" className="select" defaultValue="Em Andamento">
-              <option>Solicitado</option>
-              <option>Em Analise</option>
-              <option>Em Andamento</option>
-              <option>Concluido</option>
-            </select>
-          </div>
+          {podeEditar && (
+            <div className="field" style={{ marginTop: 18 }}>
+              <label htmlFor="status">Alterar Status</label>
+              <select
+                id="status"
+                className="select"
+                value={novoStatus || project.statusImpressao}
+                onChange={handleAlterarStatus}
+                disabled={atualizarMutation.isPending}
+              >
+                {STATUS_PIPELINE.map((s) => (
+                  <option key={s} value={s}>
+                    {STATUS_LABEL[s]}
+                  </option>
+                ))}
+              </select>
+              {atualizarMutation.isPending && (
+                <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                  Atualizando...
+                </p>
+              )}
+            </div>
+          )}
         </aside>
       </div>
 
@@ -131,30 +193,44 @@ export function ProjectDetailPage() {
           Arquivos do Projeto
         </h3>
         <div className="project-files">
-          {PROJECT_FILES.map((f) => (
-            <div key={f.name} className="project-file">
+          {(project.arquivos ?? []).map((f) => (
+            <div key={f.id} className="project-file">
               <div className="project-file__icon">
                 <Box size={20} />
               </div>
               <div className="project-file__body">
-                <div className="project-file__name">{f.name}</div>
+                <div className="project-file__name">{f.nomeArquivo}</div>
                 <div className="project-file__meta">
-                  <span className="tag">.{f.ext}</span>
-                  <span className="muted" style={{ fontSize: 12 }}>
-                    {f.size}
-                  </span>
+                  <span className="tag">.{f.tipoExtensao}</span>
                 </div>
               </div>
-              <button className="icon-btn" aria-label="Download">
+              <a
+                href={f.urlCaminho}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="icon-btn"
+                aria-label="Abrir no Drive"
+              >
                 <Download size={15} />
-              </button>
+              </a>
             </div>
           ))}
 
-          <button className="project-file project-file--add" onClick={() => navigate("/arquivos")}>
-            <Plus size={16} />
-            Adicionar Arquivo
-          </button>
+          {(project.arquivos ?? []).length === 0 && (
+            <p className="muted" style={{ fontSize: 13 }}>
+              Nenhum arquivo neste projeto ainda.
+            </p>
+          )}
+
+          {podeEditar && (
+            <button
+              className="project-file project-file--add"
+              onClick={() => navigate(`/arquivos/${project.id}`)}
+            >
+              <Plus size={16} />
+              Adicionar Arquivo
+            </button>
+          )}
         </div>
       </section>
 
@@ -164,17 +240,25 @@ export function ProjectDetailPage() {
           Historico de Alteracoes
         </h3>
         <ul className="history-list">
-          {PROJECT_HISTORY.map((h) => (
+          {(project.historicos ?? []).map((h) => (
             <li key={h.id} className="history-item">
               <span className="history-item__dot" />
               <div>
-                <p style={{ fontSize: 13.5 }}>{h.text}</p>
+                <p style={{ fontSize: 13.5 }}>
+                  Status alterado de "{STATUS_LABEL[h.statusAnterior as StatusImpressao] ?? h.statusAnterior}" para "{STATUS_LABEL[h.statusNovo as StatusImpressao] ?? h.statusNovo}"
+                </p>
                 <p className="muted" style={{ fontSize: 12, marginTop: 2 }}>
-                  {h.date}
+                  {new Date(h.dataAlteracao).toLocaleString("pt-BR")}
                 </p>
               </div>
             </li>
           ))}
+
+          {(project.historicos ?? []).length === 0 && (
+            <p className="muted" style={{ fontSize: 13 }}>
+              Nenhuma alteração registrada ainda.
+            </p>
+          )}
         </ul>
       </section>
     </>

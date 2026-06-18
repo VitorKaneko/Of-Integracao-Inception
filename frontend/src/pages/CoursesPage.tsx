@@ -8,40 +8,67 @@ import {
   BookOpen,
   Plus,
 } from "lucide-react";
-import { Course, mockCourses } from "../data/mockData";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "../auth/AuthContext";
+import { conteudoService } from "../services/conteudo.service";
+import { ConteudoEducacional } from "../types/api.types";
 import "./CoursesPage.css";
 
 const CATEGORIES = ["Todos", "Modelagem", "Impressao", "Design", "Administrativo"] as const;
-const SECTORS = ["Todos os Setores", "Projetos", "Ensino", "Tesouraria", "Marketing", "RH"];
 
-function iconForCategory(category: Course["category"]) {
+function iconForCategory(category: string) {
   if (category === "Modelagem") return <Layers size={42} />;
   if (category === "Impressao") return <Printer size={42} />;
   if (category === "Design") return <Palette size={42} />;
   return <BookOpen size={42} />;
 }
 
-function tagVariant(level: Course["level"]) {
-  if (level === "Iniciante") return "tag";
-  if (level === "Intermediario") return "tag";
-  if (level === "Avancado") return "tag tag--red";
-  return "tag";
-}
-
 export function CoursesPage() {
+  const { user } = useAuth();
   const [activeCategory, setActiveCategory] =
     useState<(typeof CATEGORIES)[number]>("Todos");
-  const [activeSector, setActiveSector] = useState(SECTORS[0]);
   const [search, setSearch] = useState("");
+  const [showNewCourse, setShowNewCourse] = useState(false);
+  const [novoTitulo, setNovoTitulo] = useState("");
+  const [novaCategoria, setNovaCategoria] = useState("Modelagem");
+  const [novoLink, setNovoLink] = useState("");
+  const [salvando, setSalvando] = useState(false);
+
+  const { data: conteudos = [], isLoading, refetch } = useQuery({
+    queryKey: ["conteudos"],
+    queryFn: conteudoService.listar,
+  });
 
   const filtered = useMemo(() => {
-    return mockCourses.filter((c) => {
-      const matchCat = activeCategory === "Todos" || c.category === activeCategory;
+    return conteudos.filter((c) => {
+      const matchCat = activeCategory === "Todos" || c.categoria === activeCategory;
       const matchSearch =
-        search.trim() === "" || c.title.toLowerCase().includes(search.toLowerCase());
+        search.trim() === "" ||
+        c.titulo.toLowerCase().includes(search.toLowerCase());
       return matchCat && matchSearch;
     });
-  }, [activeCategory, search, activeSector]);
+  }, [conteudos, activeCategory, search]);
+
+  const isAdmin = user?.perfilAcesso === "ADMIN";
+
+  async function handleCriar(e: React.FormEvent) {
+    e.preventDefault();
+    if (!novoTitulo.trim() || !novoLink.trim()) return;
+    setSalvando(true);
+    try {
+      await conteudoService.criar({
+        titulo: novoTitulo,
+        categoria: novaCategoria,
+        urlLink: novoLink,
+      });
+      await refetch();
+      setShowNewCourse(false);
+      setNovoTitulo("");
+      setNovoLink("");
+    } finally {
+      setSalvando(false);
+    }
+  }
 
   return (
     <>
@@ -62,7 +89,7 @@ export function CoursesPage() {
           />
         </div>
 
-        <div className="filter-pills" style={{ marginBottom: 12 }}>
+        <div className="filter-pills" style={{ marginBottom: 0 }}>
           {CATEGORIES.map((c) => (
             <button
               key={c}
@@ -73,54 +100,142 @@ export function CoursesPage() {
             </button>
           ))}
         </div>
-
-        <div className="filter-pills" style={{ marginBottom: 0 }}>
-          {SECTORS.map((s) => (
-            <button
-              key={s}
-              className={"pill" + (activeSector === s ? " pill--active" : "")}
-              onClick={() => setActiveSector(s)}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
       </div>
+
+      {isLoading && <p className="muted">Carregando conteúdos...</p>}
+
+      {!isLoading && filtered.length === 0 && (
+        <p className="muted" style={{ fontSize: 13 }}>
+          Nenhum conteúdo encontrado.
+        </p>
+      )}
 
       <div className="courses-grid">
         {filtered.map((c) => (
-          <article key={c.id} className="course-card card card--hoverable">
-            <div className="course-card__thumb">
-              <button className="course-card__open" aria-label="Abrir curso">
-                <ExternalLink size={14} />
-              </button>
-              <span className="course-card__badge tag">{c.category}</span>
-              <div className="course-card__icon">{iconForCategory(c.category)}</div>
-            </div>
-            <div className="course-card__body">
-              <h3 className="course-card__title">{c.title}</h3>
-              <div className="course-card__tags">
-                {c.tags.map((t) => (
-                  <span key={t} className={tagVariant(c.level)}>
-                    {t}
-                  </span>
-                ))}
-              </div>
-              <div className="course-card__meta">
-                <BookOpen size={14} />
-                <span>{c.duration}</span>
-              </div>
-              <div className="progress" style={{ marginTop: 10 }}>
-                <span style={{ width: `${c.progress}%` }} />
-              </div>
-            </div>
-          </article>
+          <CourseCard key={c.id} conteudo={c} isAdmin={isAdmin} onDeleted={refetch} />
         ))}
       </div>
 
-      <button className="fab" aria-label="Adicionar curso">
-        <Plus size={20} />
-      </button>
+      {isAdmin && (
+        <>
+          <button
+            className="fab"
+            aria-label="Adicionar curso"
+            onClick={() => setShowNewCourse(true)}
+          >
+            <Plus size={20} />
+          </button>
+
+          {showNewCourse && (
+            <div className="modal-overlay" onClick={() => setShowNewCourse(false)}>
+              <div className="modal" onClick={(e) => e.stopPropagation()}>
+                <h2 className="card-title" style={{ marginBottom: 16 }}>Novo Conteúdo</h2>
+                <form onSubmit={handleCriar} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div className="field">
+                    <label>Título</label>
+                    <input
+                      className="input"
+                      placeholder="Título do curso ou material"
+                      value={novoTitulo}
+                      onChange={(e) => setNovoTitulo(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Categoria</label>
+                    <select
+                      className="select"
+                      value={novaCategoria}
+                      onChange={(e) => setNovaCategoria(e.target.value)}
+                    >
+                      {CATEGORIES.filter((c) => c !== "Todos").map((c) => (
+                        <option key={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Link</label>
+                    <input
+                      className="input"
+                      placeholder="https://..."
+                      value={novoLink}
+                      onChange={(e) => setNovoLink(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="modal-actions">
+                    <button
+                      type="button"
+                      className="btn btn-outline"
+                      onClick={() => setShowNewCourse(false)}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      disabled={salvando}
+                    >
+                      {salvando ? "Salvando..." : "Criar"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </>
+  );
+}
+
+interface CourseCardProps {
+  conteudo: ConteudoEducacional;
+  isAdmin: boolean;
+  onDeleted: () => void;
+}
+
+function CourseCard({ conteudo, isAdmin, onDeleted }: CourseCardProps) {
+  async function handleDelete() {
+    if (!confirm(`Deletar "${conteudo.titulo}"?`)) return;
+    await conteudoService.deletar(conteudo.id);
+    onDeleted();
+  }
+
+  return (
+    <article className="course-card card card--hoverable">
+      <div className="course-card__thumb">
+        
+        <a href={conteudo.urlLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="course-card__open"
+          aria-label="Abrir curso"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <ExternalLink size={14} />
+        </a>
+        <span className="course-card__badge tag">{conteudo.categoria}</span>
+        <div className="course-card__icon">
+          {iconForCategory(conteudo.categoria)}
+        </div>
+      </div>
+      <div className="course-card__body">
+        <h3 className="course-card__title">{conteudo.titulo}</h3>
+        <div className="course-card__meta">
+          <BookOpen size={14} />
+          <span>{conteudo.usuarioAdmin?.nome ?? "—"}</span>
+        </div>
+        {isAdmin && (
+          <button
+            className="btn btn-outline"
+            style={{ marginTop: 10, fontSize: 12 }}
+            onClick={handleDelete}
+          >
+            Remover
+          </button>
+        )}
+      </div>
+    </article>
   );
 }

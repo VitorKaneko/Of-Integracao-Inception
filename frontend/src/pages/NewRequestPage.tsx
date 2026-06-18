@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Send, CheckCircle2, Circle } from "lucide-react";
+import { solicitacaoService } from "../services/solicitacao.service";
 import "./NewRequestPage.css";
 
 const PIPELINE = ["Submetido", "Em Revisao", "Aprovado", "Em Producao", "Concluido"];
@@ -16,14 +17,43 @@ export function NewRequestPage() {
     email: "",
     phone: "",
   });
+  const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
   function update<K extends keyof typeof form>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    navigate("/solicitacoes");
+    setErro(null);
+    setEnviando(true);
+
+    // Monta a descrição completa com todos os campos do formulário
+    const descricaoCompleta = [
+      `Projeto: ${form.title}`,
+      `Setor: ${form.sector}`,
+      ``,
+      `Descrição:`,
+      form.description,
+      form.reference ? `\nReferência: ${form.reference}` : "",
+      ``,
+      `--- Contato ---`,
+      `Nome: ${form.name}`,
+      `E-mail: ${form.email}`,
+      form.phone ? `Telefone: ${form.phone}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    try {
+      await solicitacaoService.criar(descricaoCompleta);
+      navigate("/solicitacoes");
+    } catch (err: any) {
+      setErro(err.response?.data?.error ?? "Erro ao enviar solicitação.");
+    } finally {
+      setEnviando(false);
+    }
   }
 
   return (
@@ -134,9 +164,15 @@ export function NewRequestPage() {
             />
           </div>
 
+          {erro && (
+            <p style={{ color: "var(--accent-red)", fontSize: 13, marginTop: 10 }}>
+              {erro}
+            </p>
+          )}
+
           <div className="form-actions">
-            <button type="submit" className="btn btn-primary">
-              <Send size={14} /> Enviar Solicitacao
+            <button type="submit" className="btn btn-primary" disabled={enviando}>
+              <Send size={14} /> {enviando ? "Enviando..." : "Enviar Solicitacao"}
             </button>
             <button
               type="button"

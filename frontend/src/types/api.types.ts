@@ -15,6 +15,7 @@ export interface Projeto {
   id: string;
   titulo: string;
   descricao?: string;
+  historicos?: HistoricoProjeto[];
   statusImpressao: StatusImpressao;
   visibilidade: Visibilidade;
   dataCriacao: string;

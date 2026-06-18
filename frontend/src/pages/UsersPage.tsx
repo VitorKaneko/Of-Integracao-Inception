@@ -1,38 +1,65 @@
 import { useMemo, useState } from "react";
-import { Search, Plus, Download, Edit3, UserPlus, ShieldAlert } from "lucide-react";
-import { mockUsers, Role, Sector } from "../data/mockData";
+import { Search, Trash2, Edit3 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { usuarioService } from "../services/usuario.service";
+import { PerfilAcesso } from "../types/api.types";
 import "./UsersPage.css";
 
-function roleClass(role: Role) {
-  if (role === "Super Admin") return "tag tag--purple";
-  if (role === "Admin") return "tag tag--red";
-  if (role === "Visitante") return "tag tag--gray";
+function roleClass(perfil: PerfilAcesso) {
+  if (perfil === "ADMIN") return "tag tag--red";
+  if (perfil === "VISITANTE") return "tag tag--gray";
   return "tag";
 }
 
-function avatarColor(c?: "teal" | "purple" | "orange" | "pink") {
-  if (c === "purple") return "avatar avatar--purple";
-  if (c === "orange") return "avatar avatar--orange";
-  if (c === "pink") return "avatar avatar--pink";
-  return "avatar";
+function getIniciais(nome: string) {
+  const partes = nome.trim().split(" ").filter(Boolean);
+  if (partes.length === 0) return "?";
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
 }
 
 export function UsersPage() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [role, setRole] = useState<"Todos" | Role>("Todos");
-  const [sector, setSector] = useState<"Todos" | Sector>("Todos");
+  const [role, setRole] = useState<"Todos" | PerfilAcesso>("Todos");
+
+  const { data: usuarios = [], isLoading } = useQuery({
+    queryKey: ["usuarios"],
+    queryFn: usuarioService.listar,
+  });
+
+  const deletarMutation = useMutation({
+    mutationFn: (id: string) => usuarioService.deletar(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["usuarios"] }),
+  });
+
+  const atualizarPerfilMutation = useMutation({
+    mutationFn: ({ id, perfilAcesso }: { id: string; perfilAcesso: PerfilAcesso }) =>
+      usuarioService.atualizar(id, { perfilAcesso }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["usuarios"] }),
+  });
 
   const filtered = useMemo(() => {
-    return mockUsers.filter((u) => {
+    return usuarios.filter((u) => {
       const matchSearch =
         search.trim() === "" ||
-        u.name.toLowerCase().includes(search.toLowerCase()) ||
+        u.nome.toLowerCase().includes(search.toLowerCase()) ||
         u.email.toLowerCase().includes(search.toLowerCase());
-      const matchRole = role === "Todos" || u.role === role;
-      const matchSector = sector === "Todos" || u.sector === sector;
-      return matchSearch && matchRole && matchSector;
+      const matchRole = role === "Todos" || u.perfilAcesso === role;
+      return matchSearch && matchRole;
     });
-  }, [search, role, sector]);
+  }, [usuarios, search, role]);
+
+  function handleEditarPerfil(id: string, atual: PerfilAcesso) {
+    const novo = prompt("Novo perfil (ADMIN, USUARIO, VISITANTE):", atual);
+    if (!novo) return;
+    const perfilNorm = novo.toUpperCase() as PerfilAcesso;
+    if (!["ADMIN", "USUARIO", "VISITANTE"].includes(perfilNorm)) {
+      alert("Perfil inválido.");
+      return;
+    }
+    atualizarPerfilMutation.mutate({ id, perfilAcesso: perfilNorm });
+  }
 
   return (
     <>
@@ -40,17 +67,6 @@ export function UsersPage() {
         <div>
           <h1>Usuarios do Sistema</h1>
           <p className="subtitle">Gerencie usuarios, permissoes e status da plataforma</p>
-        </div>
-        <div className="page-header__actions">
-          <button className="btn btn-primary">
-            <Plus size={15} /> Novo Usuario
-          </button>
-          <span
-            className="tag tag--red"
-            style={{ paddingInline: 14, paddingBlock: 8, fontSize: 12.5 }}
-          >
-            <ShieldAlert size={13} /> O Admin
-          </span>
         </div>
       </div>
 
@@ -68,26 +84,12 @@ export function UsersPage() {
             className="select"
             style={{ maxWidth: 170 }}
             value={role}
-            onChange={(e) => setRole(e.target.value as Role | "Todos")}
+            onChange={(e) => setRole(e.target.value as PerfilAcesso | "Todos")}
           >
-            <option>Todos</option>
-            <option>Super Admin</option>
-            <option>Admin</option>
-            <option>Usuario</option>
-            <option>Visitante</option>
-          </select>
-          <select
-            className="select"
-            style={{ maxWidth: 170 }}
-            value={sector}
-            onChange={(e) => setSector(e.target.value as Sector | "Todos")}
-          >
-            <option>Todos</option>
-            <option>Projetos</option>
-            <option>Ensino</option>
-            <option>Tesouraria</option>
-            <option>Marketing</option>
-            <option>RH</option>
+            <option value="Todos">Todos</option>
+            <option value="ADMIN">Admin</option>
+            <option value="USUARIO">Usuario</option>
+            <option value="VISITANTE">Visitante</option>
           </select>
         </div>
       </div>
@@ -95,10 +97,9 @@ export function UsersPage() {
       <div className="card users-table-wrap">
         <header className="users-table-wrap__header">
           <h2 className="card-title">Lista de Usuarios</h2>
-          <button className="btn btn-ghost">
-            <Download size={14} /> Exportar
-          </button>
         </header>
+
+        {isLoading && <p className="muted">Carregando usuários...</p>}
 
         <table className="users-table">
           <thead>
@@ -107,8 +108,6 @@ export function UsersPage() {
               <th>Nome</th>
               <th>Email</th>
               <th>Perfil</th>
-              <th>Setor</th>
-              <th>Status</th>
               <th>Data de cadastro</th>
               <th>Acoes</th>
             </tr>
@@ -117,34 +116,33 @@ export function UsersPage() {
             {filtered.map((u) => (
               <tr key={u.id}>
                 <td>
-                  <div className={avatarColor(u.avatarColor)}>{u.initials}</div>
+                  <div className="avatar">{getIniciais(u.nome)}</div>
                 </td>
-                <td>{u.name}</td>
+                <td>{u.nome}</td>
                 <td className="muted">{u.email}</td>
                 <td>
-                  <span className={roleClass(u.role)}>{u.role}</span>
+                  <span className={roleClass(u.perfilAcesso)}>{u.perfilAcesso}</span>
                 </td>
-                <td>{u.sector}</td>
-                <td>
-                  <span
-                    className="status-dot"
-                    style={{
-                      background:
-                        u.status === "Ativo"
-                          ? "var(--status-success)"
-                          : "var(--text-muted)",
-                    }}
-                  />
-                  {u.status}
+                <td className="muted">
+                  {new Date(u.dataCadastro).toLocaleDateString("pt-BR")}
                 </td>
-                <td className="muted">{u.createdAt}</td>
                 <td>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <button className="icon-btn" aria-label="Editar">
+                    <button
+                      className="icon-btn"
+                      aria-label="Editar perfil"
+                      onClick={() => handleEditarPerfil(u.id, u.perfilAcesso)}
+                    >
                       <Edit3 size={14} />
                     </button>
-                    <button className="icon-btn" aria-label="Permissoes">
-                      <UserPlus size={14} />
+                    <button
+                      className="icon-btn"
+                      aria-label="Excluir"
+                      onClick={() => {
+                        if (confirm(`Excluir ${u.nome}?`)) deletarMutation.mutate(u.id);
+                      }}
+                    >
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </td>
@@ -155,7 +153,7 @@ export function UsersPage() {
 
         <footer className="users-table-wrap__footer">
           <span className="muted">
-            Mostrando {filtered.length} de {mockUsers.length} usuarios
+            Mostrando {filtered.length} de {usuarios.length} usuarios
           </span>
           <div className="deco-line">
             <span />

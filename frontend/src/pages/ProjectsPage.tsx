@@ -1,44 +1,73 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, Plus, Calendar, User, Activity } from "lucide-react";
-import { mockProjects, Sector } from "../data/mockData";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { projetoService } from "../services/projeto.service";
+import { useAuth } from "../auth/AuthContext";
+import { StatusImpressao } from "../types/api.types";
+import { Modal } from "../components/Modal";
 import "./ProjectsPage.css";
 
-const SECTORS: ("Todos" | Sector)[] = [
+const STATUS_FILTERS: ("Todos" | StatusImpressao)[] = [
   "Todos",
-  "Projetos",
-  "Ensino",
-  "Tesouraria",
-  "Marketing",
-  "RH",
+  "PENDENTE",
+  "EM_ANDAMENTO",
+  "CONCLUIDO",
+  "CANCELADO",
 ];
 
-function statusTagClass(status: string) {
-  if (status === "Em Andamento") return "tag--solid-warning";
-  if (status === "Concluido") return "tag--solid-success";
-  return "tag--solid-danger";
-}
+const STATUS_LABEL: Record<string, string> = {
+  Todos: "Todos",
+  PENDENTE: "Pendente",
+  EM_ANDAMENTO: "Em Andamento",
+  CONCLUIDO: "Concluido",
+  CANCELADO: "Cancelado",
+};
 
-function progressClass(status: string) {
-  if (status === "Concluido") return "progress--success";
-  if (status === "Pausado") return "progress--danger";
+function statusTagClass(status: StatusImpressao) {
+  if (status === "EM_ANDAMENTO") return "tag--solid-warning";
+  if (status === "CONCLUIDO") return "tag--solid-success";
+  if (status === "CANCELADO") return "tag--solid-danger";
   return "";
 }
 
 export function ProjectsPage() {
-  const [activeSector, setActiveSector] = useState<"Todos" | Sector>("Todos");
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [activeStatus, setActiveStatus] = useState<"Todos" | StatusImpressao>("Todos");
   const [search, setSearch] = useState("");
+  const [showNew, setShowNew] = useState(false);
+  const [titulo, setTitulo] = useState("");
+  const [descricao, setDescricao] = useState("");
+
+  const { data: projetos = [], isLoading } = useQuery({
+    queryKey: ["projetos"],
+    queryFn: projetoService.listar,
+  });
+
+  const criarMutation = useMutation({
+    mutationFn: () =>
+      projetoService.criar({ titulo, descricao: descricao || undefined }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projetos"] });
+      setShowNew(false);
+      setTitulo("");
+      setDescricao("");
+    },
+  });
 
   const filtered = useMemo(() => {
-    return mockProjects.filter((p) => {
-      const matchSector = activeSector === "Todos" || p.sector === activeSector;
+    return projetos.filter((p) => {
+      const matchStatus = activeStatus === "Todos" || p.statusImpressao === activeStatus;
       const matchSearch =
         search.trim() === "" ||
-        p.title.toLowerCase().includes(search.toLowerCase()) ||
-        p.owner.toLowerCase().includes(search.toLowerCase());
-      return matchSector && matchSearch;
+        p.titulo.toLowerCase().includes(search.toLowerCase()) ||
+        (p.usuario?.nome ?? "").toLowerCase().includes(search.toLowerCase());
+      return matchStatus && matchSearch;
     });
-  }, [activeSector, search]);
+  }, [projetos, activeStatus, search]);
+
+  const podeCrear = user?.perfilAcesso === "ADMIN" || user?.perfilAcesso === "USUARIO";
 
   return (
     <>
@@ -47,11 +76,13 @@ export function ProjectsPage() {
           <h1>Gestao de Projetos</h1>
           <p className="subtitle">Gerencie e acompanhe todos os seus projetos de impressao 3D</p>
         </div>
-        <div className="page-header__actions">
-          <button className="btn btn-primary">
-            <Plus size={16} /> Novo Projeto
-          </button>
-        </div>
+        {podeCrear && (
+          <div className="page-header__actions">
+            <button className="btn btn-primary" onClick={() => setShowNew(true)}>
+              <Plus size={16} /> Novo Projeto
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="card" style={{ marginBottom: 18 }}>
@@ -67,50 +98,100 @@ export function ProjectsPage() {
       </div>
 
       <div className="filter-pills">
-        {SECTORS.map((s) => (
+        {STATUS_FILTERS.map((s) => (
           <button
             key={s}
-            className={"pill" + (activeSector === s ? " pill--active" : "")}
-            onClick={() => setActiveSector(s)}
+            className={"pill" + (activeStatus === s ? " pill--active" : "")}
+            onClick={() => setActiveStatus(s)}
           >
-            {s}
+            {STATUS_LABEL[s]}
           </button>
         ))}
       </div>
+
+      {isLoading && <p className="muted">Carregando projetos...</p>}
+
+      {!isLoading && filtered.length === 0 && (
+        <p className="muted" style={{ fontSize: 13 }}>
+          Nenhum projeto encontrado.
+        </p>
+      )}
 
       <div className="projects-grid">
         {filtered.map((p) => (
           <Link to={`/projetos/${p.id}`} key={p.id} className="project-card card card--hoverable">
             <div className="project-card__header">
-              <h3 className="project-card__title">{p.title}</h3>
-              <span className={"tag " + statusTagClass(p.status)}>{p.status}</span>
-            </div>
-            <div className="project-card__sector">
-              <span className="tag">{p.sector}</span>
+              <h3 className="project-card__title">{p.titulo}</h3>
+              <span className={"tag " + statusTagClass(p.statusImpressao)}>
+                {STATUS_LABEL[p.statusImpressao]}
+              </span>
             </div>
             <ul className="project-card__meta">
               <li>
-                <User size={13} /> {p.owner}
+                <User size={13} /> {p.usuario?.nome ?? "—"}
               </li>
               <li>
-                <Activity size={13} /> Etapa: <strong>{p.stage}</strong>
+                <Activity size={13} /> {p.visibilidade === "PUBLICO" ? "Público" : "Privado"}
               </li>
               <li>
-                <Calendar size={13} /> Atualizado em {p.updatedAt}
+                <Calendar size={13} /> Criado em{" "}
+                {new Date(p.dataCriacao).toLocaleDateString("pt-BR")}
               </li>
             </ul>
-            <div className="project-card__progress">
-              <div className="progress-row">
-                <span>Progresso</span>
-                <span>{p.progress}%</span>
-              </div>
-              <div className={"progress " + progressClass(p.status)}>
-                <span style={{ width: `${p.progress}%` }} />
-              </div>
-            </div>
           </Link>
         ))}
       </div>
+
+      <Modal
+        open={showNew}
+        onClose={() => setShowNew(false)}
+        title="Novo Projeto"
+        description="Crie um novo projeto de impressão 3D"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!titulo.trim()) return;
+            criarMutation.mutate();
+          }}
+          style={{ display: "flex", flexDirection: "column", gap: 14 }}
+        >
+          <div className="field">
+            <label>Título</label>
+            <input
+              className="input"
+              placeholder="Nome do projeto"
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+              required
+            />
+          </div>
+          <div className="field">
+            <label>Descrição (opcional)</label>
+            <textarea
+              className="textarea"
+              placeholder="Descreva o projeto..."
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value)}
+            />
+          </div>
+
+          {criarMutation.isError && (
+            <p style={{ color: "var(--accent-red)", fontSize: 13 }}>
+              Erro ao criar projeto. Tente novamente.
+            </p>
+          )}
+
+          <div className="modal-actions">
+            <button type="button" className="btn btn-outline" onClick={() => setShowNew(false)}>
+              Cancelar
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={criarMutation.isPending}>
+              {criarMutation.isPending ? "Criando..." : "Criar Projeto"}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </>
   );
 }

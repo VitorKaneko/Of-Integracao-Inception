@@ -9,9 +9,8 @@ import { arquivoRoutes } from './routes/arquivo.routes';
 import { solicitacaoRoutes } from './routes/solicitacao.routes';
 import { historicoRoutes } from './routes/historico.routes';
 import { conteudoRoutes } from './routes/conteudo.routes';
+import { usuarioRoutes } from './routes/usuario.routes';
 import 'dotenv/config';
-
-
 
 const app = fastify({ logger: true });
 
@@ -19,6 +18,9 @@ app.register(fastifyJwt, {
   secret: process.env.JWT_SECRET!,
   cookie: { cookieName: 'token', signed: false },
 });
+
+app.register(usuarioRoutes);
+
 
 app.register(fastifyCookie);
 
