@@ -25,9 +25,9 @@ app.register(usuarioRoutes);
 app.register(fastifyCookie);
 
 app.register(fastifyCors, {
-  origin: 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], 
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 });
 
 app.register(fastifyMultipart, {
@@ -44,10 +44,12 @@ app.get('/', async () => {
   return { mensagem: 'API da Inception 3D está rodando 100%!' };
 });
 
+const port = Number(process.env.PORT) || 3333;
+
 const start = async () => {
   try {
-    await app.listen({ port: 3333, host: '0.0.0.0' });
-    console.log('Servidor rodando em http://localhost:3333');
+    await app.listen({ port, host: '0.0.0.0' });
+    console.log(` Servidor rodando na porta ${port}`);
   } catch (err) {
     app.log.error(err);
     process.exit(1);
