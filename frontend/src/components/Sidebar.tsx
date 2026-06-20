@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { useAuth } from "../auth/AuthContext";
-import { Role } from "../data/mockData";
+import { PerfilAcesso } from "../types/api.types";
 import "./Sidebar.css";
 
 interface NavItem {
@@ -19,7 +19,7 @@ interface NavItem {
   label: string;
   icon: typeof LayoutGrid;
   end?: boolean;
-  roles?: Role[];
+  roles?: PerfilAcesso[];
 }
 
 const items: NavItem[] = [
@@ -29,19 +29,28 @@ const items: NavItem[] = [
   { to: "/cursos", label: "Cursos", icon: GraduationCap },
   { to: "/solicitacoes", label: "Solicitacoes", icon: ClipboardList },
   { to: "/perfil", label: "Perfil", icon: UserIcon },
-  { to: "/usuarios", label: "Usuarios", icon: Users, roles: ["Super Admin", "Admin"] },
+  { to: "/usuarios", label: "Usuarios", icon: Users, roles: ["ADMIN"] },
 ];
+
+function getIniciais(nome: string) {
+  const partes = nome.trim().split(" ").filter(Boolean);
+  if (partes.length === 0) return "?";
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+}
 
 export function Sidebar() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await logout();
     navigate("/login", { replace: true });
   }
 
-  const visibleItems = items.filter((i) => !i.roles || (user && i.roles.includes(user.role)));
+  const visibleItems = items.filter(
+    (i) => !i.roles || (user && i.roles.includes(user.perfilAcesso))
+  );
 
   return (
     <aside className="sidebar">
@@ -51,12 +60,12 @@ export function Sidebar() {
 
       {user && (
         <div className="sidebar__user">
-          <div className={"avatar avatar--" + (user.avatarColor ?? "teal")}>{user.initials}</div>
+          <div className="avatar avatar--teal">{getIniciais(user.nome)}</div>
           <div className="sidebar__user-info">
-            <span className="sidebar__user-name" title={user.name}>
-              {user.name}
+            <span className="sidebar__user-name" title={user.nome}>
+              {user.nome}
             </span>
-            <span className="sidebar__user-role">{user.role}</span>
+            <span className="sidebar__user-role">{user.perfilAcesso}</span>
           </div>
         </div>
       )}
