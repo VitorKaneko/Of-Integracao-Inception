@@ -24,4 +24,9 @@ export const solicitacaoService = {
     });
     return data.solicitacao;
   },
+
+  async listarMinhas(): Promise<Solicitacao[]> {
+    const { data } = await api.get<{ solicitacoes: Solicitacao[] }>('/solicitacoes/minhas');
+    return data.solicitacoes;
+  },
 };

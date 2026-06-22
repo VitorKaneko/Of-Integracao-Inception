@@ -1,19 +1,54 @@
-import { FastifyInstance } from 'fastify';
-import { criarSolicitacao, listarSolicitacoes, buscarSolicitacao, atualizarSolicitacao } from '../controllers/solicitacao.controller';
+import type { FastifyInstance } from 'fastify';
+import {
+  criarSolicitacao,
+  listarSolicitacoes,
+  listarMinhasSolicitacoes,
+  buscarSolicitacao,
+  atualizarSolicitacao,
+} from '../controllers/solicitacao.controller';
 import { verifyToken, requirePerfil } from '../middlewares/auth.middleware';
 
+interface SolicitacaoBody {
+  descricaoPedido: string;
+}
+
+interface SolicitacaoParams {
+  id: string;
+}
+
+interface AtualizarSolicitacaoBody {
+  statusSolicitacao: string;
+  justificativaRecusa?: string;
+}
+
 export async function solicitacaoRoutes(app: FastifyInstance) {
-  app.post('/solicitacoes', { preHandler: [verifyToken] }, criarSolicitacao);
+  app.post<{ Body: SolicitacaoBody }>(
+    '/solicitacoes',
+    { preHandler: [verifyToken] },
+    criarSolicitacao
+  );
 
-  app.get('/solicitacoes', {
-    preHandler: [verifyToken, requirePerfil('ADMIN')],
-  }, listarSolicitacoes);
+  app.get(
+    '/solicitacoes/minhas',
+    { preHandler: [verifyToken] },
+    listarMinhasSolicitacoes
+  );
 
-  app.get('/solicitacoes/:id', {
-    preHandler: [verifyToken, requirePerfil('ADMIN')],
-  }, buscarSolicitacao);
+  app.get(
+    '/solicitacoes',
+    { preHandler: [verifyToken, requirePerfil('ADMIN')] },
+    listarSolicitacoes
+  );
 
-  app.put('/solicitacoes/:id', {
-    preHandler: [verifyToken, requirePerfil('ADMIN')],
-  }, atualizarSolicitacao);
+  app.get<{ Params: SolicitacaoParams }>(
+    '/solicitacoes/:id',
+    { preHandler: [verifyToken, requirePerfil('ADMIN')] },
+    buscarSolicitacao
+  );
+
+  app.put<{ Params: SolicitacaoParams; Body: AtualizarSolicitacaoBody }>(
+    '/solicitacoes/:id',
+    { preHandler: [verifyToken, requirePerfil('ADMIN')] },
+    atualizarSolicitacao
+  );
 }

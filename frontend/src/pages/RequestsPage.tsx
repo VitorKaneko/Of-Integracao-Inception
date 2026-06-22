@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
-import { Calendar, X, Check, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Calendar, X, Check, User, Plus } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { solicitacaoService } from "../services/solicitacao.service";
+import { useAuth } from "../auth/AuthContext";
 import { Solicitacao, StatusSolicitacao } from "../types/api.types";
 import "./RequestsPage.css";
 
@@ -21,12 +23,17 @@ const STATUS_LABEL: Record<StatusSolicitacao, string> = {
 };
 
 export function RequestsPage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>("Todas");
 
+  const isAdmin = user?.perfilAcesso === "ADMIN";
+
+  // Admin busca todas; demais buscam só as suas
   const { data: solicitacoes = [], isLoading } = useQuery({
-    queryKey: ["solicitacoes"],
-    queryFn: solicitacaoService.listar,
+    queryKey: isAdmin ? ["solicitacoes"] : ["solicitacoes", "minhas"],
+    queryFn: isAdmin ? solicitacaoService.listar : solicitacaoService.listarMinhas,
   });
 
   const atualizarMutation = useMutation({
@@ -66,53 +73,66 @@ export function RequestsPage() {
     <>
       <div className="page-header">
         <div>
-          <h1>Solicitacoes de Projeto</h1>
-          <p className="subtitle">Gerencie as solicitacoes recebidas de clientes</p>
+          <h1>{isAdmin ? "Solicitacoes de Projeto" : "Minhas Solicitacoes"}</h1>
+          <p className="subtitle">
+            {isAdmin
+              ? "Gerencie as solicitacoes recebidas"
+              : "Acompanhe suas solicitacoes de projeto"}
+          </p>
         </div>
-        {pending > 0 && (
-          <span className="tag tag--solid-warning" style={{ fontSize: 12.5 }}>
-            {pending} pendente{pending > 1 ? "s" : ""}
-          </span>
-        )}
+        <div className="page-header__actions" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {isAdmin && pending > 0 && (
+            <span className="tag tag--solid-warning" style={{ fontSize: 12.5 }}>
+              {pending} pendente{pending > 1 ? "s" : ""}
+            </span>
+          )}
+          <button className="btn btn-primary" onClick={() => navigate("/solicitacoes/nova")}>
+            <Plus size={15} /> Nova Solicitacao
+          </button>
+        </div>
       </div>
 
-      <div className="tabs">
-        {TABS.map((t) => (
-          <button
-            key={t}
-            className={"tab" + (tab === t ? " tab--active" : "")}
-            onClick={() => setTab(t)}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
+      {isAdmin && (
+        <div className="tabs">
+          {TABS.map((t) => (
+            <button
+              key={t}
+              className={"tab" + (tab === t ? " tab--active" : "")}
+              onClick={() => setTab(t)}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
 
       {isLoading && <p className="muted">Carregando solicitações...</p>}
 
       {!isLoading && filtered.length === 0 && (
         <p className="muted" style={{ fontSize: 13 }}>
-          Nenhuma solicitação encontrada.
+          {isAdmin
+            ? "Nenhuma solicitação encontrada."
+            : "Você ainda não fez nenhuma solicitação. Clique em \"Nova Solicitacao\" para começar."}
         </p>
       )}
 
       <div className="requests-list">
-        {filtered.map((r) => (
+        {(isAdmin ? filtered : solicitacoes).map((r) => (
           <article key={r.id} className="request-card card">
             <header className="request-card__header">
-              <h3>{r.usuarioVisitante?.nome ?? "Solicitante"}</h3>
+              <h3>{r.usuarioVisitante?.nome ?? user?.nome ?? "Solicitante"}</h3>
               <span className={"tag " + statusTag(r.statusSolicitacao)}>
                 {STATUS_LABEL[r.statusSolicitacao]}
               </span>
             </header>
 
-            <div className="request-card__contact">
-              {r.usuarioVisitante?.email && (
+            {isAdmin && r.usuarioVisitante?.email && (
+              <div className="request-card__contact">
                 <span className="muted">
                   <User size={13} /> {r.usuarioVisitante.email}
                 </span>
-              )}
-            </div>
+              </div>
+            )}
 
             <p className="request-card__description" style={{ whiteSpace: "pre-line" }}>
               {r.descricaoPedido}
@@ -130,7 +150,7 @@ export function RequestsPage() {
                 {new Date(r.dataSolicitacao).toLocaleDateString("pt-BR")}
               </span>
 
-              {r.statusSolicitacao === "PENDENTE" && (
+              {isAdmin && r.statusSolicitacao === "PENDENTE" && (
                 <div className="request-card__actions">
                   <button
                     className="btn btn-danger"

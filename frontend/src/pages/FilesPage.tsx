@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { Search, Plus, Folder } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Search, Plus, Folder, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { projetoService } from "../services/projeto.service";
 import { useAuth } from "../auth/AuthContext";
@@ -35,13 +35,29 @@ export function FilesPage() {
     },
   });
 
+  const deletarMutation = useMutation({
+    mutationFn: (id: string) => projetoService.deletar(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projetos"] });
+    },
+  });
+
   const folders = useMemo(() => {
     return projetos.filter((p) =>
       p.titulo.toLowerCase().includes(search.toLowerCase())
     );
   }, [projetos, search]);
 
-  const podeCrear = user?.perfilAcesso === "ADMIN" || user?.perfilAcesso === "USUARIO";
+  const isAdmin = user?.perfilAcesso === "ADMIN";
+  const podeCrear = isAdmin || user?.perfilAcesso === "USUARIO";
+
+  function handleDeletar(e: React.MouseEvent, id: string, titulo: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (confirm(`Excluir a pasta "${titulo}" e todos os seus arquivos?`)) {
+      deletarMutation.mutate(id);
+    }
+  }
 
   return (
     <>
@@ -77,35 +93,59 @@ export function FilesPage() {
       {isLoading && <p className="muted">Carregando pastas...</p>}
 
       <div className="folders-grid">
-        {folders.map((p) => (
-          <Link
-            to={`/arquivos/${p.id}`}
-            key={p.id}
-            className="folder-card card card--hoverable"
-          >
-            <div className="folder-card__thumb">
-              <Folder size={42} color="var(--brand)" />
-            </div>
-            <div className="folder-card__body">
-              <h3 className="folder-card__title">{p.titulo}</h3>
-              <span className="tag" style={{ marginTop: 8 }}>
-                {p.statusImpressao}
-              </span>
-              <div className="folder-card__meta">
-                <span className="muted">
-                  {p.arquivos?.length ?? 0} arquivos
-                </span>
-                <span className="muted">
-                  {new Date(p.dataCriacao).toLocaleDateString("pt-BR")}
-                </span>
+        {folders.map((p) => {
+          const ehAutor = p.idUsuario === user?.id;
+          const podeExcluir = isAdmin || ehAutor;
+
+          return (
+            <Link
+              to={`/arquivos/${p.id}`}
+              key={p.id}
+              className="folder-card card card--hoverable"
+            >
+              <div className="folder-card__thumb">
+                <Folder size={42} color="var(--brand)" />
               </div>
-              <div className="deco-line" style={{ marginTop: 10 }}>
-                <span />
-                <span />
+              <div className="folder-card__body">
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    gap: 8,
+                  }}
+                >
+                  <h3 className="folder-card__title">{p.titulo}</h3>
+                  {podeExcluir && (
+                    <button
+                      className="icon-btn"
+                      aria-label="Excluir pasta"
+                      onClick={(e) => handleDeletar(e, p.id, p.titulo)}
+                      disabled={deletarMutation.isPending}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </div>
+                <span className="tag" style={{ marginTop: 8 }}>
+                  {p.statusImpressao}
+                </span>
+                <div className="folder-card__meta">
+                  <span className="muted">
+                    {p.arquivos?.length ?? 0} arquivos
+                  </span>
+                  <span className="muted">
+                    {new Date(p.dataCriacao).toLocaleDateString("pt-BR")}
+                  </span>
+                </div>
+                <div className="deco-line" style={{ marginTop: 10 }}>
+                  <span />
+                  <span />
+                </div>
               </div>
-            </div>
-          </Link>
-        ))}
+            </Link>
+          );
+        })}
       </div>
 
       <DecoSquare position="bottom-right" size={92} style={{ bottom: 32, right: 40 }} />

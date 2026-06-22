@@ -1,4 +1,4 @@
-import { FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../lib/prisma';
 
 interface SolicitacaoBody {
@@ -80,4 +80,18 @@ export async function atualizarSolicitacao(
   });
 
   return reply.send({ solicitacao: atualizada });
+}
+
+export async function listarMinhasSolicitacoes(
+  req: FastifyRequest,
+  reply: FastifyReply
+) {
+  const { sub } = req.user as { sub: string };
+
+  const solicitacoes = await prisma.solicitacao.findMany({
+    where: { idUsuarioVisitante: sub },
+    orderBy: { dataSolicitacao: 'desc' },
+  });
+
+  return reply.send({ solicitacoes });
 }

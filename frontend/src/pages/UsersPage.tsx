@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { Search, Trash2, Edit3 } from "lucide-react";
+import { Search, Trash2, Edit3, Plus } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usuarioService } from "../services/usuario.service";
 import { PerfilAcesso } from "../types/api.types";
+import { Modal } from "../components/Modal";
 import "./UsersPage.css";
 
 function roleClass(perfil: PerfilAcesso) {
@@ -23,9 +24,39 @@ export function UsersPage() {
   const [search, setSearch] = useState("");
   const [role, setRole] = useState<"Todos" | PerfilAcesso>("Todos");
 
+  // Estado do modal de novo usuário
+  const [showNew, setShowNew] = useState(false);
+  const [novoNome, setNovoNome] = useState("");
+  const [novoEmail, setNovoEmail] = useState("");
+  const [novaSenha, setNovaSenha] = useState("");
+  const [novoPerfil, setNovoPerfil] = useState<PerfilAcesso>("USUARIO");
+  const [erroNovo, setErroNovo] = useState<string | null>(null);
+
   const { data: usuarios = [], isLoading } = useQuery({
     queryKey: ["usuarios"],
     queryFn: usuarioService.listar,
+  });
+
+  const criarMutation = useMutation({
+    mutationFn: () =>
+      usuarioService.criar({
+        nome: novoNome,
+        email: novoEmail,
+        senha: novaSenha,
+        perfilAcesso: novoPerfil,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["usuarios"] });
+      setShowNew(false);
+      setNovoNome("");
+      setNovoEmail("");
+      setNovaSenha("");
+      setNovoPerfil("USUARIO");
+      setErroNovo(null);
+    },
+    onError: (err: any) => {
+      setErroNovo(err.response?.data?.error ?? "Erro ao criar usuário.");
+    },
   });
 
   const deletarMutation = useMutation({
@@ -61,12 +92,27 @@ export function UsersPage() {
     atualizarPerfilMutation.mutate({ id, perfilAcesso: perfilNorm });
   }
 
+  function handleCriar(e: React.FormEvent) {
+    e.preventDefault();
+    setErroNovo(null);
+    if (!novoNome.trim() || !novoEmail.trim() || !novaSenha.trim()) {
+      setErroNovo("Preencha todos os campos.");
+      return;
+    }
+    criarMutation.mutate();
+  }
+
   return (
     <>
       <div className="page-header">
         <div>
           <h1>Usuarios do Sistema</h1>
           <p className="subtitle">Gerencie usuarios, permissoes e status da plataforma</p>
+        </div>
+        <div className="page-header__actions">
+          <button className="btn btn-primary" onClick={() => setShowNew(true)}>
+            <Plus size={15} /> Novo Usuario
+          </button>
         </div>
       </div>
 
@@ -161,6 +207,73 @@ export function UsersPage() {
           </div>
         </footer>
       </div>
+
+      <Modal
+        open={showNew}
+        onClose={() => setShowNew(false)}
+        title="Novo Usuario"
+        description="Cadastre um novo usuário na plataforma"
+      >
+        <form onSubmit={handleCriar} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div className="field">
+            <label>Nome Completo</label>
+            <input
+              className="input"
+              placeholder="Nome do usuário"
+              value={novoNome}
+              onChange={(e) => setNovoNome(e.target.value)}
+              required
+            />
+          </div>
+          <div className="field">
+            <label>E-mail</label>
+            <input
+              className="input"
+              type="email"
+              placeholder="email@exemplo.com"
+              value={novoEmail}
+              onChange={(e) => setNovoEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="field">
+            <label>Senha</label>
+            <input
+              className="input"
+              type="password"
+              placeholder="Senha inicial"
+              value={novaSenha}
+              onChange={(e) => setNovaSenha(e.target.value)}
+              required
+            />
+          </div>
+          <div className="field">
+            <label>Perfil de Acesso</label>
+            <select
+              className="select"
+              value={novoPerfil}
+              onChange={(e) => setNovoPerfil(e.target.value as PerfilAcesso)}
+            >
+              <option value="USUARIO">Usuario</option>
+              <option value="ADMIN">Admin</option>
+              <option value="VISITANTE">Visitante</option>
+            </select>
+          </div>
+
+          {erroNovo && (
+            <p style={{ color: "var(--accent-red)", fontSize: 13 }}>{erroNovo}</p>
+          )}
+
+          <div className="modal-actions">
+            <button type="button" className="btn btn-outline" onClick={() => setShowNew(false)}>
+              Cancelar
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={criarMutation.isPending}>
+              {criarMutation.isPending ? "Criando..." : "Criar Usuario"}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </>
   );
 }
