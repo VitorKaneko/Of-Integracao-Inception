@@ -1,10 +1,13 @@
 import { useState, FormEvent } from "react";
+
 import { useLocation, useNavigate } from "react-router-dom";
 import { AlertCircle, ChevronDown } from "lucide-react";
 import { Logo } from "../components/Logo";
 import { DecoSquare } from "../components/DecoSquare";
 import { useAuth } from "../auth/AuthContext";
 import "./LoginPage.css";
+
+const isDev = import.meta.env.DEV;
 
 const DEMO_ACCOUNTS = [
   { id: "u-1", name: "Carlos Henrique Santos", email: "carlos.santos@inception3d.com", password: "carlos123", role: "ADMIN" },
@@ -102,14 +105,15 @@ export function LoginPage() {
             {loading ? "Entrando..." : "Entrar"}
           </button>
         </form>
-
-        <div className="login-accounts">
-          <button
-            type="button"
-            className="login-accounts__toggle"
-            onClick={() => setShowAccounts((s) => !s)}
+        {isDev && (
+          <div className="login-accounts">
+            <button
+              type="button"
+              className="login-accounts__toggle"
+              onClick={() => setShowAccounts((s) => !s)}
             aria-expanded={showAccounts}
           >
+        
             Contas de demonstracao
             <ChevronDown
               size={14}
@@ -142,8 +146,9 @@ export function LoginPage() {
               ))}
             </ul>
           )}
-        </div>
       </div>
+      )}
     </div>
+  </div>
   );
 }

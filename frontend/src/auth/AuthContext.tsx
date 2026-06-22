@@ -8,7 +8,7 @@ import {
   useState,
 } from 'react';
 import { authService } from '../services/auth.service';
-import { Usuario, PerfilAcesso } from '../types/api.types';
+import { Usuario } from '../types/api.types';
 
 const TOKEN_KEY = 'inception3d:token';
 
@@ -17,6 +17,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -55,9 +56,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    try {
+      const atualizado = await authService.me();
+      setUser(atualizado);
+    } catch {
+      // se falhar, mantém o usuário atual
+    }
+  }, []);
+
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isAuthenticated: !!user, login, logout }),
-    [user, login, logout]
+    () => ({ user, isAuthenticated: !!user, login, logout, refreshUser }),
+    [user, login, logout, refreshUser]
   );
 
   if (loading) return null;

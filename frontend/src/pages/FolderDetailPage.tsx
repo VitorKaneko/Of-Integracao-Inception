@@ -37,6 +37,8 @@ export function FolderDetailPage() {
       arquivoService.upload(folderId, selectedFile!, (pct) => setUploadProgress(pct)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["arquivos", folderId] });
+      queryClient.invalidateQueries({ queryKey: ["projeto", folderId] });
+      queryClient.invalidateQueries({ queryKey: ["projetos"] });
       setShowUpload(false);
       setSelectedFile(null);
       setUploadProgress(0);
@@ -47,6 +49,8 @@ export function FolderDetailPage() {
     mutationFn: (id: string) => arquivoService.deletar(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["arquivos", folderId] });
+      queryClient.invalidateQueries({ queryKey: ["projeto", folderId] });
+      queryClient.invalidateQueries({ queryKey: ["projetos"] });
     },
   });
 

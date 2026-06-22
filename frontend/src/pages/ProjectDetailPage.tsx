@@ -193,7 +193,7 @@ export function ProjectDetailPage() {
           Arquivos do Projeto
         </h3>
         <div className="project-files">
-          {(project.arquivos ?? []).map((f) => (
+          {(project.arquivos ?? []).filter((f) => f && f.id).map((f) => (
             <div key={f.id} className="project-file">
               <div className="project-file__icon">
                 <Box size={20} />

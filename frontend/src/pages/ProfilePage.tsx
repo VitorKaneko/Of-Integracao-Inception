@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { User as UserIcon } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "../auth/AuthContext";
+import { usuarioService } from "../services/usuario.service";
 import "./ProfilePage.css";
 
 function roleTagClass(perfil: string) {
@@ -17,9 +19,33 @@ function getIniciais(nome: string) {
 }
 
 export function ProfilePage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [name, setName] = useState(user?.nome ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
+  const [senha, setSenha] = useState("");
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [feedback, setFeedback] = useState<{ tipo: "ok" | "erro"; msg: string } | null>(null);
+
+  const salvarMutation = useMutation({
+    mutationFn: () =>
+      usuarioService.atualizarPerfil({
+        nome: name,
+        email,
+        senha: senha.trim() ? senha : undefined,
+      }),
+    onSuccess: async () => {
+      setFeedback({ tipo: "ok", msg: "Perfil atualizado com sucesso!" });
+      setSenha("");
+      setMostrarSenha(false);
+      if (refreshUser) await refreshUser();
+    },
+    onError: (err: any) => {
+      setFeedback({
+        tipo: "erro",
+        msg: err.response?.data?.error ?? "Erro ao atualizar perfil.",
+      });
+    },
+  });
 
   if (!user) return null;
 
@@ -27,6 +53,12 @@ export function ProfilePage() {
   const membroDesde = user.dataCadastro
     ? new Date(user.dataCadastro).toLocaleDateString("pt-BR")
     : "—";
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setFeedback(null);
+    salvarMutation.mutate();
+  }
 
   return (
     <>
@@ -37,7 +69,7 @@ export function ProfilePage() {
         </div>
       </div>
 
-      <form className="card profile-card" onSubmit={(e) => e.preventDefault()}>
+      <form className="card profile-card" onSubmit={handleSubmit}>
         <header className="profile-card__header">
           <div className="avatar avatar--lg avatar--teal">
             {iniciais || <UserIcon size={26} />}
@@ -78,14 +110,44 @@ export function ProfilePage() {
         <div className="profile-password">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <label>Senha</label>
-            <button type="button" className="link-btn">
-              Alterar senha
+            <button
+              type="button"
+              className="link-btn"
+              onClick={() => setMostrarSenha((s) => !s)}
+            >
+              {mostrarSenha ? "Cancelar" : "Alterar senha"}
             </button>
           </div>
+          {mostrarSenha && (
+            <input
+              type="password"
+              className="input"
+              style={{ marginTop: 8 }}
+              placeholder="Nova senha"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+            />
+          )}
         </div>
 
-        <button className="btn btn-primary btn-block" type="submit">
-          Salvar
+        {feedback && (
+          <p
+            style={{
+              fontSize: 13,
+              marginTop: 12,
+              color: feedback.tipo === "ok" ? "var(--brand)" : "var(--accent-red)",
+            }}
+          >
+            {feedback.msg}
+          </p>
+        )}
+
+        <button
+          className="btn btn-primary btn-block"
+          type="submit"
+          disabled={salvarMutation.isPending}
+        >
+          {salvarMutation.isPending ? "Salvando..." : "Salvar"}
         </button>
       </form>
     </>
