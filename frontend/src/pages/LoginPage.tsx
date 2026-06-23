@@ -1,7 +1,7 @@
 import { useState, FormEvent } from "react";
 
-import { useLocation, useNavigate } from "react-router-dom";
-import { AlertCircle, ChevronDown, Link } from "lucide-react";
+import { useLocation, useNavigate, Link } from "react-router-dom";
+import { AlertCircle, ChevronDown } from "lucide-react";
 import { Logo } from "../components/Logo";
 import { DecoSquare } from "../components/DecoSquare";
 import { useAuth } from "../auth/AuthContext";
@@ -130,32 +130,32 @@ export function LoginPage() {
                 transition: "transform 180ms ease",
               }}
             />
-          </button>
+            </button>
 
-          {showAccounts && (
-            <ul className="login-accounts__list">
-              {DEMO_ACCOUNTS.map((u) => (
-                <li key={u.id}>
-                  <button
-                    type="button"
-                    className={"login-account" + (u.inactive ? " login-account--inactive" : "")}
-                    onClick={() => fillAccount(u.email, u.password)}
-                  >
-                    <div className="login-account__top">
-                      <span className="login-account__name">{u.name}</span>
-                      <span className={"tag tag-role-" + u.role}>{u.role}</span>
-                    </div>
-                    <div className="login-account__creds">
-                      <span>{u.email}</span>
-                      <span className="login-account__pwd">{u.password}</span>
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-      </div>
-      )}
+            {showAccounts && (
+              <ul className="login-accounts__list">
+                {DEMO_ACCOUNTS.map((u) => (
+                  <li key={u.id}>
+                    <button
+                      type="button"
+                      className={"login-account" + (u.inactive ? " login-account--inactive" : "")}
+                      onClick={() => fillAccount(u.email, u.password)}
+                    >
+                      <div className="login-account__top">
+                        <span className="login-account__name">{u.name}</span>
+                        <span className={"tag tag-role-" + u.role}>{u.role}</span>
+                      </div>
+                      <div className="login-account__creds">
+                        <span>{u.email}</span>
+                        <span className="login-account__pwd">{u.password}</span>
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>  
+        )}
     </div>
   </div>
   );
