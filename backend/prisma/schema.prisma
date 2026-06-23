@@ -35,6 +35,7 @@ model Usuario {
   nome           String
   email          String    @unique
   senha          String
+  telefone       String?
   perfilAcesso   PerfilAcesso @default(VISITANTE)
   dataCadastro   DateTime  @default(now())
 

@@ -1,7 +1,7 @@
 import { useState, FormEvent } from "react";
 
 import { useLocation, useNavigate } from "react-router-dom";
-import { AlertCircle, ChevronDown } from "lucide-react";
+import { AlertCircle, ChevronDown, Link } from "lucide-react";
 import { Logo } from "../components/Logo";
 import { DecoSquare } from "../components/DecoSquare";
 import { useAuth } from "../auth/AuthContext";
@@ -105,6 +105,13 @@ export function LoginPage() {
             {loading ? "Entrando..." : "Entrar"}
           </button>
         </form>
+          <Link
+            to="/cadastro"
+            className="link-btn"
+            style={{ marginTop: 16, display: "block", textAlign: "center" }}
+          >
+            Não tem conta? Cadastre-se
+          </Link>
         {isDev && (
           <div className="login-accounts">
             <button

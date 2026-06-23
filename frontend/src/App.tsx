@@ -12,12 +12,14 @@ import { RequestsPage } from "./pages/RequestsPage";
 import { NewRequestPage } from "./pages/NewRequestPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { UsersPage } from "./pages/UsersPage";
+import { RegisterPage } from "./pages/RegisterPage";
+
 
 function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-
+      <Route path="/cadastro" element={<RegisterPage />} />
       <Route
         element={
           <ProtectedRoute>

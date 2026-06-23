@@ -18,6 +18,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  register: (nome: string, email: string, senha: string, telefone?: string) => Promise<{ ok: true } | { ok: false; error: string }>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -50,6 +51,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+    const register = useCallback(async (nome: string, email: string, senha: string, telefone?: string) => {
+    try {
+      const { token, user } = await authService.register(nome, email, senha, telefone);
+      localStorage.setItem(TOKEN_KEY, token);
+      setUser(user);
+      return { ok: true } as const;
+    } catch (err: any) {
+      const message = err.response?.data?.error ?? 'Erro ao cadastrar.';
+      return { ok: false, error: message } as const;
+    }
+  }, []);
   const logout = useCallback(async () => {
     await authService.logout().catch(() => {});
     localStorage.removeItem(TOKEN_KEY);
@@ -66,8 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isAuthenticated: !!user, login, logout, refreshUser }),
-    [user, login, logout, refreshUser]
+    () => ({ user, isAuthenticated: !!user, login, logout, register, refreshUser }),
+    [user, login, logout, register, refreshUser]
   );
 
   if (loading) return null;

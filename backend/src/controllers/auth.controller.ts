@@ -6,6 +6,7 @@ interface RegisterBody {
   nome: string;
   email: string;
   senha: string;
+  telefone?: string;
 }
 
 interface LoginBody {
@@ -17,7 +18,7 @@ export async function register(
   req: FastifyRequest<{ Body: RegisterBody }>,
   reply: FastifyReply
 ) {
-  const { nome, email, senha } = req.body;
+  const { nome, email, senha, telefone } = req.body;
 
   const userExists = await prisma.usuario.findUnique({ where: { email } });
   if (userExists) {
@@ -27,7 +28,13 @@ export async function register(
   const senhaHash = await bcrypt.hash(senha, 10);
 
   const user = await prisma.usuario.create({
-    data: { nome, email, senha: senhaHash },
+    data: {
+      nome,
+      email,
+      senha: senhaHash,
+      telefone: telefone ?? null,
+      perfilAcesso: 'VISITANTE', // cadastro público sempre entra como visitante
+    },
   });
 
   const token = await reply.jwtSign({ sub: user.id, email: user.email });
