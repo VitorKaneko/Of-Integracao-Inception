@@ -104,7 +104,6 @@ export function LoginPage() {
           >
             {loading ? "Entrando..." : "Entrar"}
           </button>
-        </form>
           <Link
             to="/cadastro"
             className="link-btn"
@@ -112,6 +111,8 @@ export function LoginPage() {
           >
             Não tem conta? Cadastre-se
           </Link>
+        </form>
+          
         {isDev && (
           <div className="login-accounts">
             <button
